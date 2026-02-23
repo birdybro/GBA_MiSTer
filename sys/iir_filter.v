@@ -139,7 +139,29 @@ always @(posedge clk) if (ce) begin
 end
 
 reg [31:0] out;
-always @(posedge clk) if (sample_ce) out <= {out_l, out_r};
+reg        sample_req;
+
+always @(posedge clk or posedge reset) begin
+	if (reset) begin
+		out        <= 32'd0;
+    	sample_req <= 1'b0;
+	end else begin
+    	// request a new output sample at the desired rate
+    	if (sample_ce) sample_req <= 1'b1;
+
+    	// fulfill the request only on a coherent ce phase
+    	if (ce && sample_req) begin
+    		if (!stereo) begin
+        		out        <= {y_clamp, y_clamp};
+        		sample_req <= 1'b0;
+      		end else if (!ch) begin
+        		// on ch==0 phase: left is held in out_m, right is current y_clamp
+        		out        <= {out_m, y_clamp};
+        		sample_req <= 1'b0;
+    		end
+    	end
+	end
+end
 
 assign {output_l, output_r} = out;
 
