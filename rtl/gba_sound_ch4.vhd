@@ -61,6 +61,9 @@ architecture arch of gba_sound_ch4 is
    signal soundcycles_freq     : unsigned(23 downto 0)  := (others => '0');
    signal soundcycles_envelope : unsigned(17 downto 0) := (others => '0');
    signal soundcycles_length   : unsigned(16 downto 0) := (others => '0');
+
+   signal target_out           : signed(15 downto 0) := (others => '0');
+   signal prev_out             : signed(15 downto 0) := (others => '0');
    
 begin 
 
@@ -221,8 +224,16 @@ begin
                else
                   sound_out <= to_signed(-1 * volume, 16);
                end if;
+
+               -- Apply 2-tap moving average to soften the slew rate
+               -- ch4 is non-linear, IIR filter from mister is linear, 
+               sound_out <= (target_out + prev_out) / 2;
+               prev_out  <= target_out;
+                                            
             else
-               sound_out <= (others => '0');
+               target_out <= (others => '0');
+               prev_out   <= (others => '0');
+               sound_out  <= (others => '0');
             end if;
          
             sound_on <= ch_on;
@@ -234,6 +245,7 @@ begin
   
 
 end architecture;
+
 
 
 
